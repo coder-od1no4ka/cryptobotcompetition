@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CryptoBot Auction System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏆 CryptoBot Auction System</h1>
+            <p>Telegram Gift Auctions Implementation</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('auctions')">Аукционы</button>
+            <button class="tab-btn" onclick="showTab('create')">Создать аукцион</button>
+            <button class="tab-btn" onclick="showTab('user')">Мой профиль</button>
+            <button class="tab-btn" onclick="showTab('bots')">Боты</button>
+        </div>
+
+        <!-- Вкладка: Аукционы -->
+        <div id="auctions-tab" class="tab-content active">
+            <div class="section">
+                <h2>Активные аукционы</h2>
+                <button onclick="loadAuctions()" class="btn btn-primary">Обновить</button>
+                <div id="auctions-list" class="auctions-grid"></div>
+            </div>
+        </div>
+
+        <!-- Вкладка: Создать аукцион -->
+        <div id="create-tab" class="tab-content">
+            <div class="section">
+                <h2>Создать новый аукцион</h2>
+                <form id="create-auction-form" class="form">
+                    <div class="form-group">
+                        <label>Название:</label>
+                        <input type="text" id="auction-title" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Описание:</label>
+                        <textarea id="auction-description"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Всего товаров:</label>
+                        <input type="number" id="total-items" min="1" value="10" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Товаров в раунде:</label>
+                        <input type="number" id="items-per-round" min="1" value="3" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Длительность раунда (сек):</label>
+                        <input type="number" id="round-duration" min="10" value="60" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Минимальная ставка:</label>
+                        <input type="number" id="min-bid" min="0" value="1" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Anti-sniping окно (сек):</label>
+                        <input type="number" id="anti-sniping" min="0" value="10" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Создать аукцион</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Вкладка: Мой профиль -->
+        <div id="user-tab" class="tab-content">
+            <div class="section">
+                <h2>Мой профиль</h2>
+                <div class="form-group">
+                    <label>User ID:</label>
+                    <input type="text" id="user-id" value="user1" placeholder="Введите ваш User ID">
+                    <button onclick="loadUserProfile()" class="btn btn-secondary">Загрузить профиль</button>
+                </div>
+                <div id="user-info" class="user-info"></div>
+                <div class="form-group">
+                    <label>Пополнить баланс:</label>
+                    <input type="number" id="deposit-amount" min="0" value="100" step="0.01">
+                    <button onclick="depositBalance()" class="btn btn-success">Пополнить</button>
+                </div>
+                <div id="transactions" class="transactions-list"></div>
+            </div>
+        </div>
+
+        <!-- Вкладка: Боты -->
+        <div id="bots-tab" class="tab-content">
+            <div class="section">
+                <h2>Управление ботами</h2>
+                <div class="form-group">
+                    <label>Количество ботов:</label>
+                    <input type="number" id="bot-count" min="1" max="50" value="5">
+                </div>
+                <div class="form-group">
+                    <label>Интервал ставок (мс):</label>
+                    <input type="number" id="bot-interval" min="100" value="1000">
+                </div>
+                <div class="form-group">
+                    <label>ID аукциона:</label>
+                    <input type="text" id="bot-auction-id" placeholder="Введите ID аукциона (например, скопируйте из списка аукционов)">
+                    <small style="color: #666; display: block; margin-top: 5px;">Скопируйте ID из карточки аукциона выше</small>
+                </div>
+                <div class="bot-controls">
+                    <button onclick="startBots()" class="btn btn-success">Запустить ботов</button>
+                    <button onclick="stopBots()" class="btn btn-danger">Остановить ботов</button>
+                </div>
+                <div id="bot-status" class="bot-status"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для деталей аукциона -->
+    <div id="auction-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <div id="auction-details"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
