@@ -77,30 +77,30 @@ Telegram Gift Auctions — это многораундовая система а
 ```
 cryptobotcompetition/
 ├── src/
-│   ├── models/          # Mongoose модели
-│   │   ├── User.ts      # Модель пользователя
-│   │   ├── Auction.ts   # Модель аукциона
-│   │   └── Transaction.ts # Модель транзакции
-│   ├── services/        # Бизнес-логика
+│   ├── models/          
+│   │   ├── User.ts     
+│   │   ├── Auction.ts   
+│   │   └── Transaction.ts 
+│   ├── services/        
 │   │   ├── UserService.ts
 │   │   └── AuctionService.ts
-│   ├── controllers/     # HTTP контроллеры
+│   ├── controllers/    
 │   │   ├── UserController.ts
 │   │   └── AuctionController.ts
-│   ├── routes/          # Маршруты API
+│   ├── routes/          
 │   │   ├── userRoutes.ts
 │   │   └── auctionRoutes.ts
-│   ├── middleware/      # Middleware
+│   ├── middleware/     
 │   │   └── errorHandler.ts
-│   ├── config/          # Конфигурация
+│   ├── config/         
 │   │   ├── database.ts
 │   │   └── logger.ts
-│   ├── jobs/            # Фоновые задачи
-│   │   └── roundProcessor.ts # Автозавершение раундов
-│   ├── scripts/         # Утилиты
-│   │   └── loadTest.ts  # Скрипт нагрузочного тестирования
-│   └── server.ts        # Точка входа
-├── public/              # Frontend
+│   ├── jobs/            
+│   │   └── roundProcessor.ts 
+│   ├── scripts/         
+│   │   └── loadTest.ts  
+│   └── server.ts        
+├── public/              
 │   ├── index.html
 │   ├── styles.css
 │   └── app.js
@@ -227,7 +227,7 @@ npm run build
 4. **Запустить сервер**
 ```bash
 npm start
-# или для разработки:
+
 npm run dev
 ```
 
