@@ -387,6 +387,137 @@ header p {
     margin-bottom: 5px;
 }
 
+/* Стили для ползунка ставок */
+.bid-slider-container {
+    margin: 20px 0;
+}
+
+.bid-slider-container label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: 500;
+    color: #555;
+}
+
+.slider-wrapper {
+    position: relative;
+    margin: 20px 0;
+    padding: 10px 0 40px 0;
+}
+
+.slider-wrapper input[type="range"] {
+    width: 100%;
+    height: 8px;
+    border-radius: 5px;
+    background: #e0e0e0;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.slider-wrapper input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #667eea;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.4);
+    transition: all 0.3s;
+}
+
+.slider-wrapper input[type="range"]::-webkit-slider-thumb:hover {
+    background: #5568d3;
+    transform: scale(1.1);
+}
+
+.slider-wrapper input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #667eea;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.4);
+    transition: all 0.3s;
+}
+
+.slider-wrapper input[type="range"]::-moz-range-thumb:hover {
+    background: #5568d3;
+    transform: scale(1.1);
+}
+
+.slider-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    font-size: 12px;
+    color: #666;
+    position: relative;
+}
+
+.slider-labels span {
+    position: relative;
+}
+
+.slider-labels span:nth-child(2) {
+    font-weight: bold;
+    font-size: 16px;
+    color: #667eea;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: -5px;
+}
+
+/* Индикатор топ-ставок */
+.slider-threshold {
+    position: absolute;
+    top: -5px;
+    height: 38px;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.threshold-line {
+    width: 2px;
+    height: 100%;
+    background: #dc3545;
+    margin: 0 auto;
+    position: relative;
+}
+
+.threshold-label {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #dc3545;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.threshold-label::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: #dc3545;
+}
+
+.leaderboard-item.top-bid {
+    background: #fff3cd;
+    font-weight: 600;
+    border-left: 4px solid #ffc107;
+}
+
 @media (max-width: 768px) {
     .auctions-grid {
         grid-template-columns: 1fr;
