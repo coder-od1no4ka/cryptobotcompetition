@@ -39,6 +39,7 @@ router.get('/:id/user/:userId/bids',
   validateRequest,
   AuctionController.getUserBids
 );
+router.post('/fix-problematic', AuctionController.fixProblematicAuctions);
 
 export default router;
 
