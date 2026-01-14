@@ -158,6 +158,16 @@ export class AuctionController {
       res.status(500).json({ error: error.message });
     }
   }
+
+  async fixProblematicAuctions(_req: Request, res: Response): Promise<void> {
+    try {
+      const result = await AuctionService.fixProblematicAuctions();
+      res.json(result);
+    } catch (error: any) {
+      logger.error('Error fixing auctions:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
 }
 
 export default new AuctionController();

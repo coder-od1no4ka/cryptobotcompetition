@@ -71,15 +71,15 @@ async function loadAuctions() {
                 <span class="status ${auction.status}">${auction.status}</span>
                 <div class="auction-info">
                     <p><strong>ID:</strong> <code style="font-size: 0.9em; background: #f0f0f0; padding: 2px 6px; border-radius: 3px; cursor: pointer;" onclick="event.stopPropagation(); copyToClipboard('${auction._id}')" title="Нажмите, чтобы скопировать">${auction._id}</code></p>
-                    <p>Раунд: ${auction.currentRound} / ${Math.ceil(auction.totalItems / auction.itemsPerRound)}</p>
-                    <p>Товаров в раунде: ${auction.itemsPerRound}</p>
+                    <p>Раунд: ${auction.currentRound} / ${auction.winnersPerRound?.length || Math.ceil(auction.totalItems / auction.itemsPerRound)}</p>
+                    <p>Победителей в текущем раунде: ${auction.rounds[auction.currentRound - 1]?.winningSlots || (auction.winnersPerRound?.[auction.currentRound - 1]) || auction.itemsPerRound}</p>
                     <p>Минимальная ставка: ${auction.minBid}</p>
                     <p>Ставок: ${auction.bids?.length || 0}</p>
                 </div>
                 ${auction.status === 'active' ? `
                     <div class="bid-form">
                         <input type="number" id="bid-${auction._id}" placeholder="Сумма ставки" min="${auction.minBid}" step="0.01" onclick="event.stopPropagation()">
-                        <button class="btn btn-primary" onclick="placeBid('${auction._id}', event)">Ставка</button>
+                        <button class="btn btn-primary" onclick="placeBid('${auction._id}', event)">Поставить ставку</button>
                     </div>
                 ` : ''}
             </div>
@@ -98,6 +98,22 @@ async function showAuctionDetails(auctionId) {
         
         const currentRound = auction.rounds[auction.currentRound - 1];
         const timeLeft = currentRound ? Math.max(0, Math.floor((new Date(currentRound.endTime) - new Date()) / 1000)) : 0;
+        const winningSlots = currentRound?.winningSlots || auction.itemsPerRound;
+        const maxRounds = auction.winnersPerRound?.length || Math.ceil(auction.totalItems / auction.itemsPerRound);
+        
+        // Загрузить лидерборд для расчета максимальной ставки
+        let leaderboard = [];
+        try {
+            leaderboard = await apiCall(`/auctions/${auctionId}/round/${auction.currentRound}/leaderboard`);
+        } catch (e) {
+            console.error('Error loading leaderboard:', e);
+        }
+        
+        // Вычислить минимальную и максимальную ставку для ползунка
+        const minBid = auction.minBid;
+        const maxBidAmount = leaderboard.length > 0 ? Math.max(...leaderboard.map(b => b.amount)) : minBid;
+        const maxBid = maxBidAmount * 1.1; // +10% от максимальной ставки
+        const topBidThreshold = leaderboard.length >= winningSlots ? leaderboard[winningSlots - 1].amount : minBid;
         
         details.innerHTML = `
             <h2>${auction.title}</h2>
@@ -105,9 +121,10 @@ async function showAuctionDetails(auctionId) {
             <p>${auction.description || 'Нет описания'}</p>
             
             <div class="round-info">
-                <h4>Текущий раунд: ${auction.currentRound}</h4>
+                <h4>Текущий раунд: ${auction.currentRound} / ${maxRounds}</h4>
                 ${currentRound ? `
                     <p>Статус: <span class="status ${currentRound.status}">${currentRound.status}</span></p>
+                    <p>Победных мест в раунде: ${winningSlots}</p>
                     <p>Ставок в раунде: ${currentRound.totalBids}</p>
                     ${currentRound.status === 'active' ? `
                         <div class="countdown">Осталось: ${formatTime(timeLeft)}</div>
@@ -117,8 +134,31 @@ async function showAuctionDetails(auctionId) {
             
             ${currentRound && currentRound.status === 'active' ? `
                 <div class="bid-form">
-                    <input type="number" id="modal-bid-${auction._id}" placeholder="Сумма ставки" min="${auction.minBid}" step="0.01">
-                    <button class="btn btn-primary" onclick="placeBid('${auction._id}')">Сделать ставку</button>
+                    <h4>Сделать ставку</h4>
+                    <div class="bid-slider-container">
+                        <label for="bid-slider-${auction._id}">Сумма ставки:</label>
+                        <div class="slider-wrapper">
+                            <input type="range" 
+                                   id="bid-slider-${auction._id}" 
+                                   min="${minBid}" 
+                                   max="${maxBid.toFixed(2)}" 
+                                   step="0.01" 
+                                   value="${minBid}"
+                                   oninput="updateBidValue('${auction._id}', this.value)">
+                            <div class="slider-labels">
+                                <span>${minBid}</span>
+                                <span id="bid-value-${auction._id}">${minBid}</span>
+                                <span>${maxBid.toFixed(2)}</span>
+                            </div>
+                            ${leaderboard.length >= winningSlots ? `
+                                <div class="slider-threshold" style="left: ${((topBidThreshold - minBid) / (maxBid - minBid) * 100)}%">
+                                    <div class="threshold-line"></div>
+                                    <div class="threshold-label">Топ ${winningSlots}</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="placeBidFromSlider('${auction._id}')">Поставить ставку</button>
                 </div>
             ` : ''}
             
@@ -143,7 +183,7 @@ async function showAuctionDetails(auctionId) {
         
         // Загрузить лидерборд
         if (currentRound) {
-            loadLeaderboard(auctionId, auction.currentRound);
+            loadLeaderboard(auctionId, auction.currentRound, winningSlots);
         }
         
         // Обновлять таймер каждую секунду
@@ -164,6 +204,24 @@ async function showAuctionDetails(auctionId) {
     }
 }
 
+function updateBidValue(auctionId, value) {
+    const valueEl = document.getElementById(`bid-value-${auctionId}`);
+    if (valueEl) {
+        valueEl.textContent = parseFloat(value).toFixed(2);
+    }
+}
+
+async function placeBidFromSlider(auctionId) {
+    const slider = document.getElementById(`bid-slider-${auctionId}`);
+    if (!slider || !slider.value) {
+        alert('Выберите сумму ставки');
+        return;
+    }
+    
+    const amount = parseFloat(slider.value);
+    await placeBid(auctionId, null, amount);
+}
+
 function closeModal() {
     document.getElementById('auction-modal').style.display = 'none';
 }
@@ -174,7 +232,7 @@ function formatTime(seconds) {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-async function loadLeaderboard(auctionId, roundNumber) {
+async function loadLeaderboard(auctionId, roundNumber, winningSlots = null) {
     try {
         const leaderboard = await apiCall(`/auctions/${auctionId}/round/${roundNumber}/leaderboard`);
         const container = document.getElementById(`leaderboard-${auctionId}`);
@@ -184,31 +242,53 @@ async function loadLeaderboard(auctionId, roundNumber) {
             return;
         }
         
-        container.innerHTML = leaderboard.map((bid, idx) => `
-            <div class="leaderboard-item">
-                <span>${idx + 1}. User ${bid.userId}</span>
-                <span><strong>${bid.amount}</strong></span>
-            </div>
-        `).join('');
+        // Если winningSlots не передан, попробовать получить из аукциона
+        if (!winningSlots) {
+            try {
+                const auction = await apiCall(`/auctions/${auctionId}`);
+                const currentRound = auction.rounds[auction.currentRound - 1];
+                winningSlots = currentRound?.winningSlots || auction.itemsPerRound;
+            } catch (e) {
+                winningSlots = leaderboard.length; // Fallback
+            }
+        }
+        
+        container.innerHTML = leaderboard.map((bid, idx) => {
+            const isTop = idx < winningSlots;
+            return `
+                <div class="leaderboard-item ${isTop ? 'top-bid' : ''}">
+                    <span>${idx + 1}. User ${bid.userId} ${isTop ? '🏆' : ''}</span>
+                    <span><strong>${bid.amount.toFixed(2)}</strong></span>
+                </div>
+            `;
+        }).join('');
     } catch (error) {
         console.error('Error loading leaderboard:', error);
     }
 }
 
 // Разместить ставку
-async function placeBid(auctionId, event) {
+async function placeBid(auctionId, event, amount = null) {
     if (event) event.stopPropagation();
     
-    const inputId = `bid-${auctionId}`;
-    const modalInputId = `modal-bid-${auctionId}`;
-    const input = document.getElementById(inputId) || document.getElementById(modalInputId);
-    
-    if (!input || !input.value) {
-        alert('Введите сумму ставки');
-        return;
+    // Если amount не передан, пытаемся получить из input или slider
+    if (!amount) {
+        const inputId = `bid-${auctionId}`;
+        const modalInputId = `modal-bid-${auctionId}`;
+        const sliderId = `bid-slider-${auctionId}`;
+        
+        const input = document.getElementById(inputId) || document.getElementById(modalInputId);
+        const slider = document.getElementById(sliderId);
+        
+        if (slider && slider.value) {
+            amount = parseFloat(slider.value);
+        } else if (input && input.value) {
+            amount = parseFloat(input.value);
+        } else {
+            alert('Введите сумму ставки');
+            return;
+        }
     }
-    
-    const amount = parseFloat(input.value);
     
     try {
         await apiCall(`/auctions/${auctionId}/bid`, {
@@ -220,7 +300,16 @@ async function placeBid(auctionId, event) {
         });
         
         alert('Ставка размещена!');
-        input.value = '';
+        
+        // Очистить поля
+        const inputId = `bid-${auctionId}`;
+        const modalInputId = `modal-bid-${auctionId}`;
+        const sliderId = `bid-slider-${auctionId}`;
+        const input = document.getElementById(inputId) || document.getElementById(modalInputId);
+        const slider = document.getElementById(sliderId);
+        if (input) input.value = '';
+        if (slider) slider.value = slider.min;
+        
         await loadAuctions();
         
         // Обновить детали, если модальное окно открыто
@@ -233,15 +322,97 @@ async function placeBid(auctionId, event) {
     }
 }
 
+// Функция для обновления формы победителей по раундам
+function updateWinnersPerRound() {
+    const totalItems = parseInt(document.getElementById('total-items').value) || 10;
+    const numRounds = parseInt(document.getElementById('num-rounds').value) || 4;
+    const container = document.getElementById('winners-per-round-container');
+    const sumDiv = document.getElementById('winners-sum');
+    
+    if (!container) return;
+    
+    // Вычислить равномерное распределение
+    const baseValue = Math.floor(totalItems / numRounds);
+    const remainder = totalItems % numRounds;
+    
+    container.innerHTML = '';
+    let currentSum = 0;
+    
+    for (let i = 0; i < numRounds; i++) {
+        const value = i < remainder ? baseValue + 1 : baseValue;
+        currentSum += value;
+        
+        const roundDiv = document.createElement('div');
+        roundDiv.className = 'form-group';
+        roundDiv.style.marginBottom = '10px';
+        roundDiv.innerHTML = `
+            <label style="display: inline-block; width: 150px;">Раунд ${i + 1}:</label>
+            <input type="number" 
+                   class="winners-per-round-input" 
+                   min="1" 
+                   value="${value}" 
+                   data-round="${i}"
+                   style="width: 100px; padding: 8px; border: 2px solid #e0e0e0; border-radius: 4px;"
+                   onchange="updateWinnersSum()">
+        `;
+        container.appendChild(roundDiv);
+    }
+    
+    updateWinnersSum();
+}
+
+// Функция для обновления суммы победителей
+function updateWinnersSum() {
+    const totalItems = parseInt(document.getElementById('total-items').value) || 0;
+    const inputs = document.querySelectorAll('.winners-per-round-input');
+    const sumDiv = document.getElementById('winners-sum');
+    
+    if (!sumDiv) return;
+    
+    let sum = 0;
+    inputs.forEach(input => {
+        sum += parseInt(input.value) || 0;
+    });
+    
+    sumDiv.textContent = `Сумма: ${sum} / ${totalItems}`;
+    
+    if (sum === totalItems) {
+        sumDiv.style.color = '#28a745';
+        sumDiv.innerHTML = `✓ Сумма: ${sum} / ${totalItems}`;
+    } else if (sum > totalItems) {
+        sumDiv.style.color = '#dc3545';
+        sumDiv.innerHTML = `✗ Сумма: ${sum} / ${totalItems} (превышена на ${sum - totalItems})`;
+    } else {
+        sumDiv.style.color = '#ffc107';
+        sumDiv.innerHTML = `⚠ Сумма: ${sum} / ${totalItems} (не хватает ${totalItems - sum})`;
+    }
+}
+
 // Создать аукцион
 document.getElementById('create-auction-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     
+    // Получить winnersPerRound из формы
+    const inputs = document.querySelectorAll('.winners-per-round-input');
+    const winnersPerRound = Array.from(inputs).map(input => parseInt(input.value) || 0);
+    const totalItems = parseInt(document.getElementById('total-items').value);
+    
+    // Проверить, что сумма равна totalItems
+    const sum = winnersPerRound.reduce((a, b) => a + b, 0);
+    if (sum !== totalItems) {
+        alert(`Сумма победителей по раундам (${sum}) должна равняться общему количеству товаров (${totalItems})!`);
+        return;
+    }
+    
+    // Вычислить itemsPerRound как среднее значение (для обратной совместимости)
+    const itemsPerRound = Math.max(...winnersPerRound);
+    
     const data = {
         title: document.getElementById('auction-title').value,
         description: document.getElementById('auction-description').value,
-        totalItems: parseInt(document.getElementById('total-items').value),
-        itemsPerRound: parseInt(document.getElementById('items-per-round').value),
+        totalItems: totalItems,
+        itemsPerRound: itemsPerRound, // Для обратной совместимости
+        winnersPerRound: winnersPerRound, // Новое поле
         roundDuration: parseInt(document.getElementById('round-duration').value),
         minBid: parseFloat(document.getElementById('min-bid').value),
         antiSnipingWindow: parseInt(document.getElementById('anti-sniping').value),
@@ -260,6 +431,7 @@ document.getElementById('create-auction-form').addEventListener('submit', async 
         
         alert('Аукцион создан и запущен!');
         e.target.reset();
+        updateWinnersPerRound(); // Сбросить форму победителей
         showTab('auctions');
         await loadAuctions();
     } catch (error) {
@@ -437,6 +609,7 @@ window.onclick = function(event) {
 document.addEventListener('DOMContentLoaded', () => {
     loadAuctions();
     loadUserProfile();
+    updateWinnersPerRound(); // Инициализировать форму победителей
     
     // Обновлять аукционы каждые 5 секунд
     setInterval(loadAuctions, 5000);

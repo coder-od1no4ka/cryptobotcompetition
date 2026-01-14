@@ -44,11 +44,17 @@
                     </div>
                     <div class="form-group">
                         <label>Всего товаров:</label>
-                        <input type="number" id="total-items" min="1" value="10" required>
+                        <input type="number" id="total-items" min="1" value="10" required onchange="updateWinnersPerRound()">
                     </div>
                     <div class="form-group">
-                        <label>Товаров в раунде:</label>
-                        <input type="number" id="items-per-round" min="1" value="3" required>
+                        <label>Количество раундов:</label>
+                        <input type="number" id="num-rounds" min="1" value="4" required onchange="updateWinnersPerRound()">
+                    </div>
+                    <div class="form-group">
+                        <label>Победителей в каждом раунде:</label>
+                        <div id="winners-per-round-container"></div>
+                        <small style="color: #666; display: block; margin-top: 5px;">Сумма должна равняться общему количеству товаров</small>
+                        <div id="winners-sum" style="margin-top: 10px; font-weight: bold; color: #28a745;"></div>
                     </div>
                     <div class="form-group">
                         <label>Длительность раунда (сек):</label>

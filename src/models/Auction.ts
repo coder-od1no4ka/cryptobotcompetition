@@ -12,6 +12,7 @@ export interface IRound extends Document {
   startTime: Date;
   endTime: Date;
   status: 'pending' | 'active' | 'completed';
+  winningSlots: number; // Количество победных мест в этом раунде
   winners: Array<{
     userId: string;
     bidAmount: number;
@@ -24,7 +25,8 @@ export interface IAuction extends Document {
   title: string;
   description?: string;
   totalItems: number; // Общее количество товаров
-  itemsPerRound: number; // Количество товаров в каждом раунде
+  itemsPerRound: number; // Количество товаров в каждом раунде (по умолчанию, если не указан winnersPerRound)
+  winnersPerRound?: number[]; // Массив количества победителей для каждого раунда (опционально)
   roundDuration: number; // Длительность раунда в секундах
   minBid: number;
   antiSnipingWindow: number; // Окно продления раунда при последней ставке (в секундах)
@@ -84,6 +86,11 @@ const RoundSchema: Schema = new Schema(
       enum: ['pending', 'active', 'completed'],
       default: 'pending',
     },
+    winningSlots: {
+      type: Number,
+      required: false, // Необязательно для обратной совместимости
+      min: 1,
+    },
     winners: [
       {
         userId: String,
@@ -117,6 +124,22 @@ const AuctionSchema: Schema = new Schema(
       type: Number,
       required: true,
       min: 1,
+    },
+    winnersPerRound: {
+      type: [Number],
+      required: false,
+      validate: {
+        validator: function(arr: number[]) {
+          if (!arr || arr.length === 0) return true; // Опционально
+          if (!arr.every((val: number) => val > 0)) return false;
+          // totalItems будет доступен через this
+          const totalItems = (this as any).totalItems;
+          if (!totalItems) return true; // Если totalItems еще не установлен, пропускаем валидацию
+          const sum = arr.reduce((s: number, val: number) => s + val, 0);
+          return sum === totalItems;
+        },
+        message: 'Сумма победителей по раундам должна равняться totalItems, каждое значение должно быть > 0',
+      },
     },
     roundDuration: {
       type: Number,
